@@ -6,13 +6,29 @@ on:
         description: 'The version to be released please respect: major.minor.patch or major.minor.patch-beta<number> format. example: 7.4.3 or 7.4.3-beta1'
         required: true
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.GH_BOT_ACCESS_TOKEN != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   call-remove-milestone:
+    needs: config
+    if: needs.config.outputs.has-secrets
     uses: grafana/grafana/.github/workflows/remove-milestone.yml@main
     with:
       version_call: ${{ github.event.inputs.version_input }}
     secrets:
       token: ${{ secrets.GH_BOT_ACCESS_TOKEN }}
   call-close-milestone:
+    if: needs.config.outputs.has-secrets
     uses: grafana/grafana/.github/workflows/close-milestone.yml@main
     with:
       version_call: ${{ github.event.inputs.version_input }}

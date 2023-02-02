@@ -6,7 +6,22 @@ on:
         required: true
         description: 'Needs to match, exactly, the name of a milestone. The version to be released please respect: major.minor.patch or major.minor.patch-beta<number> format. example: 7.4.3 or 7.4.3-beta1'
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.GRAFANA_MISC_STATS_API_KEY != '' && secrets.GH_BOT_ACCESS_TOKEN != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   main:
+    needs: config
+    if: needs.config.outputs.has-secrets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Actions
@@ -17,7 +32,7 @@ jobs:
           ref: main
       - name: Install Actions
         run: npm install --production --prefix ./actions
-      - name: Run update changelog (manually invoked)        
+      - name: Run update changelog (manually invoked)
         uses: ./actions/update-changelog
         with:
           token: ${{ secrets.GH_BOT_ACCESS_TOKEN }}

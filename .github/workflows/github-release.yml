@@ -3,10 +3,25 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        required: true        
+        required: true
         description: Needs to match, exactly, the name of a milestone (NO v prefix)
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.GRAFANA_MISC_STATS_API_KEY != '' && secrets.GH_BOT_ACCESS_TOKEN != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   main:
+    needs: config
+    if: needs.config.outputs.has-secrets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Actions
@@ -14,7 +29,7 @@ jobs:
         with:
           repository: "grafana/grafana-github-actions"
           path: ./actions
-          ref: main    
+          ref: main
       - name: Install Actions
         run: npm install --production --prefix ./actions
       - name: Run github release action

@@ -15,7 +15,22 @@ on:
       token:
         required: true
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.GH_BOT_ACCESS_TOKEN != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   main:
+    needs: config
+    if: needs.config.outputs.has-secrets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Actions
@@ -27,7 +42,7 @@ jobs:
       - name: Install Actions
         run: npm install --production --prefix ./actions
       - name: Close milestone (manually invoked)
-        if: ${{ github.event.inputs.version != '' }}
+        if: ${{ github.event.inputs.version != '' && env.HAS_SECRETS }}
         uses: ./actions/close-milestone
         with:
           token: ${{ secrets.GH_BOT_ACCESS_TOKEN }}

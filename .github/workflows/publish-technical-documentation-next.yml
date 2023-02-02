@@ -8,8 +8,22 @@ on:
       - "docs/sources/**"
   workflow_dispatch:
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.WEBSITE_SYNC_GRAFANA != '' && secrets.PUBLISH_TO_WEBSITE_GRAFANA != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   sync:
-    if: "github.repository == 'grafana/grafana'"
+    needs: config
+    if: needs.config.outputs.has-secrets
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout Grafana repo"

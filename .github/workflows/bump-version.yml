@@ -8,10 +8,24 @@ on:
 env:
     YARN_ENABLE_IMMUTABLE_INSTALLS: false
 jobs:
+  config:
+    runs-on: "ubuntu-latest"
+    outputs:
+      has-secrets: ${{ steps.check.has-secrets }}
+    steps:
+      - name: "Check for secrets"
+        id: check
+        shell: bash
+        run: |
+          if [ -n "${{ (secrets.GRAFANA_MISC_STATS_API_KEY != '' && secrets.GH_BOT_ACCESS_TOKEN != '') || '' }}" ]; then
+            echo "has-secrets=1" >> "$GITHUB_OUTPUT"
+          fi
+
   main:
+    needs: config
+    if: needs.config.outputs.has-secrets
     runs-on: ubuntu-latest
     steps:
-    # This is a basic workflow to help you get started with Actions
       - uses: actions-ecosystem/action-regex-match@v2.0.2
         if: ${{ github.event.inputs.version != '' }}
         id: regex-match
@@ -68,7 +82,7 @@ jobs:
           node-version: '16'
       - name: Install Actions
         run: npm install --production --prefix ./actions
-      - name: Run bump version (manually invoked)        
+      - name: Run bump version (manually invoked)
         uses: ./actions/bump-version
         with:
           token: ${{ secrets.GH_BOT_ACCESS_TOKEN }}
